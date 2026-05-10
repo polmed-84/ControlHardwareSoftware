@@ -1,0 +1,55 @@
+﻿@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IComponenteService ComponenteService
+@inject IJSRuntime JS
+
+<EditForm Model="Modelo" OnValidSubmit="ManejarGuardado">
+    <DataAnnotationsValidator />
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label">Tipo</label>
+            <InputSelect @bind-Value="Modelo.tipo_componente" class="form-select">
+                <option value="">Seleccione...</option>
+                <option value="Memoria RAM">Memoria RAM</option>
+                <option value="Disco Duro">Disco Duro</option>
+                <option value="Procesador">Procesador</option>
+                <option value="Tarjeta de Video">Tarjeta de Video</option>
+            </InputSelect>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Marca</label>
+            <InputText @bind-Value="Modelo.marca" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Modelo</label>
+            <InputText @bind-Value="Modelo.modelo" class="form-control" />
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">Capacidad</label>
+            <InputText @bind-Value="Modelo.capacidad" class="form-control" placeholder="Ej: 16GB, 1TB" />
+        </div>
+        <div class="col-md-12">
+            <label class="form-label">Descripción</label>
+            <InputTextArea @bind-Value="Modelo.descripcion" class="form-control" />
+        </div>
+    </div>
+    <div class="mt-4 d-flex justify-content-end">
+                
+        <button type="submit" class="btn btn-primary">@TextoBoton</button>
+
+    </div>
+</EditForm>
+
+@code {
+    [Parameter] public Componente Modelo { get; set; } = new();
+    [Parameter] public EventCallback AlGuardar { get; set; }
+    [Parameter] public string TextoBoton { get; set; } = "Guardar";
+
+    private async Task ManejarGuardado()
+    {
+        await ComponenteService.GuardarComponente(Modelo);
+        await JS.InvokeVoidAsync("cerrarModal", "modalComponente");
+        await Task.Delay(100);
+        await AlGuardar.InvokeAsync();
+    }
+}

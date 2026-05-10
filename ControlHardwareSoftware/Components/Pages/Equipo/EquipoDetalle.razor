@@ -1,0 +1,243 @@
+﻿@page "/equipos/detalles/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Pages.Componentes
+@using ControlHardwareSoftware.Components.Services
+@inject IEquipoService EquipoService
+@inject IComponenteService ComponenteService
+@inject ISoftwareInstaladoService InstalacionService
+@inject IMantenimientoService MantenimientoService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Detalle de Equipo</PageTitle>
+
+@if (equipo == null)
+{
+    <div class="alert alert-info">Cargando información del equipo...</div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-pc-display"></i> @equipo.codigo_inventario</h2>
+        <button class="btn btn-secondary" @onclick="Volver">Volver al listado</button>
+    </div>
+
+    @* Ficha Técnica Rápida *@
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">Información General</h5>
+                    <p class="mb-1"><strong>Marca/Modelo:</strong> @equipo.marca @equipo.modelo</p>
+                    <p class="mb-1"><strong>S/N:</strong> @equipo.numero_serie</p>
+                    <p class="mb-1"><strong>Estado:</strong> <span class="badge bg-success">@equipo.estado</span></p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card shadow-sm border-info">
+                <div class="card-body">
+                    <h5 class="card-title text-info">Asignación</h5>
+                    <p class="mb-1"><strong>Responsable:</strong> @(equipo.Usuario?.nombre ?? "No asignado")</p>
+                    <p class="mb-1"><strong>Área:</strong> @(equipo.Ubicacion?.nombre_area ?? "N/A")</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Navegación por Pestañas *@
+    <ul class="nav nav-tabs" id="equipoTab" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" id="hw-tab" data-bs-toggle="tab" data-bs-target="#hw" type="button">Hardware</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="sw-tab" data-bs-toggle="tab" data-bs-target="#sw" type="button">Software</button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" id="mant-tab" data-bs-toggle="tab" data-bs-target="#mant" type="button">Mantenimientos</button>
+        </li>
+    </ul>
+
+    <div class="tab-content border-start border-end border-bottom p-4 bg-white shadow-sm" id="equipoTabContent">
+
+        @* Pestaña Hardware *@
+        <div class="tab-pane fade show active" id="hw" role="tabpanel">
+            <div class="d-flex justify-content-between mb-2">
+                <h5>Componentes Instalados</h5>
+                @* Botón que navega a la página del formulario *@
+                <button class="btn btn-sm btn-primary" @onclick="IrANuevoComponente">
+                    <i class="bi bi-plus-lg"></i> Agregar Componente
+                </button>
+            </div>
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Marca/Modelo</th>
+                        <th>Capacidad</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in equipo.Componentes)
+                    {
+                        <tr>
+                            <td>@c.tipo_componente</td>
+                            <td>@c.marca @c.modelo</td>
+                            <td>@c.capacidad</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-outline-warning" @onclick="() => IrAEditarComponente(c.id_componente)">
+                                    Editar
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => EliminarComp(c.id_componente)">
+                                    Eliminar
+                                </button>
+                                
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+
+
+        @* Pestaña Software *@
+        <div class="tab-pane fade" id="sw" role="tabpanel">
+            <div class="d-flex justify-content-between mb-2">
+                <h5>Software e Instalaciones</h5>
+                
+                <button class="btn btn-sm btn-primary" @onclick='() => NavigationManager.NavigateTo($"/instalaciones/nuevo/{Id}")'>
+                    <i class="bi bi-download"></i> Instalar Nuevo Software
+                </button>
+
+            </div>
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Programa</th>
+                        <th>Versión</th>
+                        <th>Licencia</th>
+                        <th>Estado</th>
+                        <th>Actualizado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in equipo.SoftwaresInstalados)
+                    {
+                        <tr>
+                            <td>@s.Software?.nombre</td>
+                            <td>@s.version_instalada</td>
+                            <td>@s.Licencia?.tipo_licencia</td>
+                            <td>
+                                <span class="badge @(s.estado == "Activo" ? "bg-success" : "bg-warning text-dark"  )">
+                                    @s.estado
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge @(s.requiere_actualizacion == true ? "bg-warning text-dark" : "bg-success")">
+                                    @(s.requiere_actualizacion ? "NO": "**Si**" )
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-warning btn-sm border-0" @onclick='() => NavigationManager.NavigateTo($"/instalaciones/editar/{s.id_software_instalado}")'>
+                                    Editar
+                                </button>
+                             
+                                <button class="btn btn-outline-danger btn-sm border-0" @onclick="() => EliminarInst(s.id_software_instalado)">
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* Pestaña Mantenimiento *@
+        <div class="tab-pane fade" id="mant" role="tabpanel">
+            <div class="d-flex justify-content-between mb-2">
+                <h5>Historial de Soporte Técnico</h5>
+                <button class="btn btn-sm btn-primary" @onclick='() => NavigationManager.NavigateTo($"/mantenimientos/nuevo/{Id}")'>
+                    <i class="bi bi-tools"></i> Registrar Mantenimiento
+                </button>
+            </div>
+            <table class="table table-sm table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Tipo</th>
+                        <th>Técnico</th>
+                        <th>Costo</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in equipo.Mantenimientos.OrderByDescending(x => x.fecha_mantenimiento))
+                    {
+                        <tr>
+                            <td>@m.fecha_mantenimiento?.ToShortDateString()</td>
+                            <td>@m.tipo_mantenimiento</td>
+                            <td>@m.tecnico</td>
+                            <td>$@m.costo</td>
+                            <td>
+                                <span class="badge @(m.estado == "Completado" ? "bg-success" : "bg-warning text-dark")">
+                                    @m.estado
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-warning btn-sm border-0" @onclick='() => NavigationManager.NavigateTo($"/mantenimientos/editar/{m.id_mantenimiento}")'>
+                                    Editar
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm border-0" @onclick="() => EliminarMant(m.id_mantenimiento)">
+                                    Eliminar
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+    private Equipo? equipo;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        equipo = await EquipoService.ObtenerEquipoPorId(Id);
+    }
+
+    private void IrANuevoComponente() => NavigationManager.NavigateTo($"/componentes/nuevo/{Id}");
+
+    private void IrAEditarComponente(int idComp) => NavigationManager.NavigateTo($"/componentes/editar/{idComp}");
+
+    private async Task EliminarComp(int idComp)
+    {
+        // En un proyecto real usarías un modal o JS confirm, aquí directo por sencillez
+        await ComponenteService.EliminarComponente(idComp);
+        equipo = await EquipoService.ObtenerEquipoPorId(Id); // Recargamos la lista
+    }
+
+    private async Task EliminarInst(int idInst)
+    {
+        await InstalacionService.EliminarInstalacion(idInst);
+        equipo = await EquipoService.ObtenerEquipoPorId(Id);
+    }
+
+    private async Task EliminarMant(int idMant)
+    {
+        await MantenimientoService.EliminarMantenimiento(idMant);
+        equipo = await EquipoService.ObtenerEquipoPorId(Id);
+    }
+
+    private void Volver() => NavigationManager.NavigateTo("/equipos");
+
+   
+}
+
+

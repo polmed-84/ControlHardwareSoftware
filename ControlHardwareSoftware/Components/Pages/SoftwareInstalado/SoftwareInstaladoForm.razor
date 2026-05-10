@@ -1,0 +1,217 @@
+﻿@page "/instalaciones/nuevo/{IdEquipo:int}"
+@page "/instalaciones/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject ISoftwareInstaladoService InstalacionService
+@inject ISoftwareService SoftwareService
+@inject ILicenciaService LicenciaService
+@inject IActualizacionSoftwareService ActualizacionService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Instalación</PageTitle>
+
+<div class="container">
+    <h3>@titulo de Software</h3>
+
+    <div class="card p-4 shadow-sm mb-4">
+        <EditForm Model="instalacion" OnValidSubmit="Guardar">
+            <DataAnnotationsValidator />
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Software a Instalar</label>
+                    @* Usamos @onchange manual para limpiar la licencia si cambia el software *@
+                    <select class="form-select" value="@instalacion.id_software" @onchange="OnSoftwareChanged">
+                        <option value="">-- Seleccione Programa --</option>
+                        @foreach (var sw in listaSoftware)
+                        {
+                            <option value="@sw.id_software">@sw.nombre</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Licencia Asignada</label>
+                    <InputSelect @bind-Value="instalacion.id_licencia" class="form-select">
+                        <option value="">-- Seleccione Licencia --</option>
+                        @foreach (var lic in listaLicencias.Where(l => l.id_software == instalacion.id_software))
+                        {
+                            <option value="@lic.id_licencia">@lic.tipo_licencia (@lic.proveedor)</option>
+                        }
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Versión Instalada</label>
+                    <InputText @bind-Value="instalacion.version_instalada" class="form-control" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Fecha de Instalación</label>
+                    <InputDate @bind-Value="instalacion.fecha_instalacion" class="form-control" />
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Estado</label>
+                    <InputSelect @bind-Value="instalacion.estado" class="form-select">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                        <option value="Pendiente">Pendiente</option>
+                    </InputSelect>
+                </div>
+
+                <div class="col-md-6 d-flex align-items-center mt-5">
+                    <div class="form-check">
+                        <InputCheckbox @bind-Value="instalacion.requiere_actualizacion" class="form-check-input" id="checkAct" />
+                        <label class="form-check-label" for="checkAct">¿Requiere Actualización?</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">@((Id.HasValue) ? "Actualizar Datos" : "Registrar Software")</button>
+                <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+            </div>
+        </EditForm>
+    </div>
+
+    @* SECCIÓN DE ACTUALIZACIONES: Solo visible al editar *@
+    @if (Id.HasValue)
+    {
+        <div class="card p-4 shadow-sm border-info">
+            <h4 class="text-info"><i class="bi bi-arrow-up-circle"></i> Historial de Actualizaciones</h4>
+
+            @* Formulario rápido para nueva actualización *@
+            <div class="bg-light p-3 mb-3 border rounded">
+                <EditForm Model="nuevaActualizacion" OnValidSubmit="RegistrarVersion">
+                    <div class="row g-2">
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Nueva Versión</label>
+                            <InputText @bind-Value="nuevaActualizacion.version_nueva" class="form-control form-control-sm" placeholder="Ej: v2.0" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small fw-bold">Responsable</label>
+                            <InputText @bind-Value="nuevaActualizacion.responsable" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small fw-bold">Observaciones</label>
+                            <InputText @bind-Value="nuevaActualizacion.observaciones" class="form-control form-control-sm" />
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-info btn-sm w-100 text-white">Actualizar</button>
+                        </div>
+                    </div>
+                </EditForm>
+            </div>
+
+            <table class="table table-sm table-striped">
+                <thead class="table-secondary">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>V. Anterior</th>
+                        <th>V. Nueva</th>
+                        <th>Responsable</th>
+                        <th>Observaciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (instalacion.Actualizaciones != null && instalacion.Actualizaciones.Any())
+                    {
+                        @foreach (var act in instalacion.Actualizaciones.OrderByDescending(a => a.fecha_actualizacion))
+                        {
+                            <tr>
+                                <td>@act.fecha_actualizacion?.ToShortDateString()</td>
+                                <td>@act.version_anterior</td>
+                                <td>@act.version_nueva</td>
+                                <td>@act.responsable</td>
+                                <td>@act.observaciones</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr><td colspan="5" class="text-center">No hay historial registrado.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [Parameter] public int? IdEquipo { get; set; }
+
+    private SoftwareInstalado instalacion = new() { fecha_instalacion = DateTime.Now, estado = "Activo" };
+    private ActualizacionSoftware nuevaActualizacion = new();
+    private List<Software> listaSoftware = new();
+    private List<Licencia> listaLicencias = new();
+    private string titulo = "Nueva Instalación";
+
+    protected override async Task OnInitializedAsync()
+    {
+        listaSoftware = await SoftwareService.ObtenerSoftwares();
+        listaLicencias = await LicenciaService.ObtenerLicencias();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            var instDb = await InstalacionService.ObtenerInstalacionPorId(Id.Value);
+            if (instDb != null)
+            {
+                instalacion = instDb;
+                titulo = "Editar Instalación";
+            }
+        }
+        else if (IdEquipo.HasValue)
+        {
+            instalacion = new SoftwareInstalado
+            {
+                id_equipo = IdEquipo.Value,
+                fecha_instalacion = DateTime.Now,
+                estado = "Activo"
+            };
+        }
+    }
+
+    private void OnSoftwareChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int swId))
+        {
+            instalacion.id_software = swId;
+            instalacion.id_licencia = null; // Resetear licencia si cambia el software
+        }
+    }
+
+    private async Task RegistrarVersion()
+    {
+        if (string.IsNullOrEmpty(nuevaActualizacion.version_nueva)) return;
+
+        nuevaActualizacion.id_software_instalado = instalacion.id_software_instalado;
+        nuevaActualizacion.version_anterior = instalacion.version_instalada;
+        nuevaActualizacion.fecha_actualizacion = DateTime.Now;
+
+        await ActualizacionService.RegistrarActualizacion(nuevaActualizacion);
+
+        // Actualizar la versión actual de la instalación
+        instalacion.version_instalada = nuevaActualizacion.version_nueva;
+        instalacion.requiere_actualizacion = false;
+        await InstalacionService.GuardarInstalacion(instalacion);
+
+        // Recargar datos
+        nuevaActualizacion = new();
+        instalacion = await InstalacionService.ObtenerInstalacionPorId(instalacion.id_software_instalado);
+    }
+
+    private async Task Guardar()
+    {
+        await InstalacionService.GuardarInstalacion(instalacion);
+        Regresar();
+    }
+
+    private void Cancelar() => Regresar();
+    private void Regresar() => NavigationManager.NavigateTo($"/equipos/detalles/{instalacion.id_equipo}");
+}

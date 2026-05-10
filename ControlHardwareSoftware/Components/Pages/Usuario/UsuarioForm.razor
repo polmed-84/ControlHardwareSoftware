@@ -1,0 +1,77 @@
+﻿@page "/usuarios/nuevo"
+@page "/usuarios/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IUsuarioService UsuarioService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Usuario</PageTitle>
+
+<h3>@titulo Usuario</h3>
+
+<div class="card p-4 shadow-sm">
+    <EditForm Model="usuario" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Nombre Completo</label>
+                <InputText @bind-Value="usuario.nombre" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Correo Electrónico</label>
+                <InputText @bind-Value="usuario.correo" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Cargo</label>
+                <InputText @bind-Value="usuario.cargo" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Departamento</label>
+                <InputText @bind-Value="usuario.departamento" class="form-control" />
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">teléfono</label>
+                <InputText @bind-Value="usuario.telefono" class="form-control" />
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private Usuario usuario = new();
+    private string titulo = "Nuevo";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            var userDb = await UsuarioService.ObtenerUsuarioPorId(Id.Value);
+            if (userDb != null)
+            {
+                usuario = userDb;
+                titulo = "Editar";
+            }
+        }
+    }
+
+    private async Task Guardar()
+    {
+        await UsuarioService.GuardarUsuario(usuario);
+        NavigationManager.NavigateTo("/usuarios");
+    }
+
+    private void Cancelar() => NavigationManager.NavigateTo("/usuarios");
+}

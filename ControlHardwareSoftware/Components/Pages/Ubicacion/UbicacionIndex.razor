@@ -1,0 +1,156 @@
+﻿@page "/ubicaciones"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IUbicacionService UbicacionService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Ubicaciones</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Ubicaciones / Áreas</h1>
+    <button class="btn btn-primary" @onclick="CrearNuevo">
+        <i class="bi bi-geo-alt"></i> Nueva Ubicación
+    </button>
+</div>
+
+@* Barra de búsqueda *@
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="input-group">
+            <span class="input-group-text">Buscar</span>
+            <input type="text" class="form-control" placeholder="Buscar por área o dirección..."
+                   @bind="textoBusqueda" @bind:event="oninput" />
+        </div>
+    </div>
+</div>
+
+@if (ubicaciones == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <table class="table table-hover shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Área</th>
+                <th>Dirección</th>
+                <th>Descripción</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var u in UbicacionesPaginadas)
+            {
+                <tr>
+                    <td><strong>@u.nombre_area</strong></td>
+                    <td>@u.direccion</td>
+                    <td>@u.descripcion</td>
+                    <td class="text-center">
+                        <button class="btn btn-sm btn-outline-warning me-2" @onclick="() => Editar(u.id_ubicacion)">
+                            Editar
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(u.id_ubicacion)">
+                            Eliminar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+    @* Paginación *@
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span>Página @paginaActual de @totalPaginas (@ubicacionesFiltradas.Count registros)</span>
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)">Anterior</button>
+                </li>
+                @for (int i = 1; i <= totalPaginas; i++)
+                {
+                    int j = i;
+                    <li class="page-item @(paginaActual == j ? "active" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(j)">@j</button>
+                    </li>
+                }
+                <li class="page-item @(paginaActual == totalPaginas ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)">Siguiente</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}
+
+@code {
+    private List<Ubicacion>? ubicaciones;
+    private List<Ubicacion> ubicacionesFiltradas = new();
+    private string _textoBusqueda = "";
+
+    private string textoBusqueda
+    {
+        get => _textoBusqueda;
+        set
+        {
+            if (_textoBusqueda != value)
+            {
+                _textoBusqueda = value;
+                paginaActual = 1;
+                FiltrarUbicaciones();
+            }
+        }
+    }
+
+    private int paginaActual = 1;
+    private int elementosPorPagina = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        ubicaciones = await UbicacionService.ObtenerUbicaciones();
+        ubicacionesFiltradas = ubicaciones ?? new();
+    }
+
+    private void FiltrarUbicaciones()
+    {
+        if (ubicaciones == null) return;
+
+        if (string.IsNullOrWhiteSpace(_textoBusqueda))
+        {
+            ubicacionesFiltradas = ubicaciones;
+        }
+        else
+        {
+            ubicacionesFiltradas = ubicaciones.Where(u =>
+                (u.nombre_area?.Contains(_textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (u.direccion?.Contains(_textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+        }
+    }
+
+    private IEnumerable<Ubicacion> UbicacionesPaginadas =>
+        ubicacionesFiltradas
+            .Skip((paginaActual - 1) * elementosPorPagina)
+            .Take(elementosPorPagina);
+
+    private int totalPaginas => Math.Max(1, (int)Math.Ceiling((double)ubicacionesFiltradas.Count / elementosPorPagina));
+
+    private void CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas)
+        {
+            paginaActual = nuevaPagina;
+        }
+    }
+
+    private void CrearNuevo() => NavigationManager.NavigateTo("/ubicaciones/nuevo");
+    private void Editar(int id) => NavigationManager.NavigateTo($"/ubicaciones/editar/{id}");
+
+    private async Task Eliminar(int id)
+    {
+        await UbicacionService.EliminarUbicacion(id);
+        ubicaciones = await UbicacionService.ObtenerUbicaciones();
+        FiltrarUbicaciones();
+    }
+}
+

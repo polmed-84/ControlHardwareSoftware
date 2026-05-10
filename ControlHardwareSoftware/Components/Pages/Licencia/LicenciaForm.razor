@@ -1,0 +1,97 @@
+﻿@page "/licencias/nuevo"
+@page "/licencias/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject ILicenciaService LicenciaService
+@inject ISoftwareService SoftwareService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Licencia</PageTitle>
+
+<h3>@titulo Licencia</h3>
+
+<div class="card p-4 shadow-sm">
+    <EditForm Model="licencia" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Software Relacionado</label>
+                <InputSelect @bind-Value="licencia.id_software" class="form-select">
+                    <option value="">-- Seleccione Software --</option>
+                    @foreach (var s in listaSoftware)
+                    {
+                        <option value="@s.id_software">@s.nombre</option>
+                    }
+                </InputSelect>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Tipo de Licencia</label>
+                <InputText @bind-Value="licencia.tipo_licencia" class="form-control" placeholder="Ej: OEM, Retail, Volumen" />
+            </div>
+            <div class="col-md-12">
+                <label class="form-label">Clave de Licencia / Serial</label>
+                <InputText @bind-Value="licencia.clave_licencia" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Cantidad</label>
+                <InputNumber @bind-Value="licencia.cantidad_licencias" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Fecha Compra</label>
+                <InputDate @bind-Value="licencia.fecha_compra" class="form-control" />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Fecha Vencimiento</label>
+                <InputDate @bind-Value="licencia.fecha_vencimiento" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Proveedor</label>
+                <InputText @bind-Value="licencia.proveedor" class="form-control" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Estado</label>
+                <InputSelect @bind-Value="licencia.estado" class="form-select">
+                    <option value="Activa">Activa</option>
+                    <option value="Vencida">Vencida</option>
+                    <option value="Agotada">Agotada</option>
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Guardar</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private Licencia licencia = new() { estado = "Activa" };
+    private List<Software> listaSoftware = new();
+    private string titulo = "Nueva";
+
+    protected override async Task OnInitializedAsync()
+    {
+        listaSoftware = await SoftwareService.ObtenerSoftwares();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            var lDb = await LicenciaService.ObtenerLicenciaPorId(Id.Value);
+            if (lDb != null) { licencia = lDb; titulo = "Editar"; }
+        }
+    }
+
+    private async Task Guardar()
+    {
+        await LicenciaService.GuardarLicencia(licencia);
+        NavigationManager.NavigateTo("/licencias");
+    }
+
+    private void Cancelar() => NavigationManager.NavigateTo("/licencias");
+}

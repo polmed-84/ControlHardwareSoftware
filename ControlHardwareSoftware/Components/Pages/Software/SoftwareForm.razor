@@ -1,0 +1,84 @@
+﻿@page "/softwares/nuevo"
+@page "/softwares/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject ISoftwareService SoftwareService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Software</PageTitle>
+
+<h3>@titulo Software</h3>
+
+<div class="card p-4 shadow-sm" style="max-width: 700px;">
+    <EditForm Model="software" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+
+        <div class="row g-3">
+            <div class="col-md-12">
+                <label class="form-label">Nombre del Software</label>
+                <InputText @bind-Value="software.nombre" class="form-control" placeholder="Ej: Microsoft Office 2021" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Versión Actual</label>
+                <InputText @bind-Value="software.version_actual" class="form-control" placeholder="Ej: 21.0.1" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Tipo de Software</label>
+                <InputSelect @bind-Value="software.tipo_software" class="form-select">
+                    <option value="">Seleccione...</option>
+                    <option value="Sistemas Operativos">Sistemas Operativos</option>
+                    <option value="Ofimática">Ofimática</option>
+                    <option value="Diseño">Diseño</option>
+                    <option value="Seguridad">Seguridad</option>
+                    <option value="Desarrollo">Desarrollo</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Fabricante / Desarrollador</label>
+                <InputText @bind-Value="software.fabricante" class="form-control" placeholder="Ej: Microsoft, Adobe, JetBrains" />
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">
+                <i class="bi bi-save"></i> Guardar Software
+            </button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private Software software = new();
+    private string titulo = "Nuevo";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            // Debes asegurarte que tu servicio tenga un método ObtenerPorId
+            // Por ahora usaremos el listado filtrado para el ejemplo
+            var lista = await SoftwareService.ObtenerSoftwares();
+            var softwareDb = lista.FirstOrDefault(s => s.id_software == Id.Value);
+            if (softwareDb != null)
+            {
+                software = softwareDb;
+                titulo = "Editar";
+            }
+        }
+    }
+
+    private async Task Guardar()
+    {
+        await SoftwareService.GuardarSoftware(software);
+        NavigationManager.NavigateTo("/softwares");
+    }
+
+    private void Cancelar() => NavigationManager.NavigateTo("/softwares");
+}

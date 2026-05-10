@@ -1,0 +1,200 @@
+﻿@page "/componentes/nuevo/{IdEquipo:int}"
+@page "/componentes/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IComponenteService ComponenteService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Componente</PageTitle>
+
+<h3>@titulo Componente</h3>
+
+<div class="card p-4 shadow-sm" style="max-width: 700px;">
+    <EditForm Model="componente" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Tipo de Componente</label>
+                <InputSelect @bind-Value="componente.tipo_componente" class="form-select">
+                    <option value="">Seleccione...</option>
+                    <option value="Memoria RAM">Memoria RAM</option>
+                    <option value="Disco Duro">Disco Duro</option>
+                    <option value="Procesador">Procesador</option>
+                    <option value="Tarjeta de Video">Tarjeta de Video</option>
+                    <option value="Fuente de Poder">Fuente de Poder</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Marca</label>
+                <InputText @bind-Value="componente.marca" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Modelo</label>
+                <InputText @bind-Value="componente.modelo" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Capacidad</label>
+                <InputText @bind-Value="componente.capacidad" class="form-control" placeholder="Ej: 16GB, 1TB" />
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Descripción Detallada</label>
+                <InputTextArea @bind-Value="componente.descripcion" class="form-control" rows="2" />
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Guardar y Regresar</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; } // Para editar
+    [Parameter] public int? IdEquipo { get; set; } // Para nuevo
+
+    private Componente componente = new();
+    private string titulo = "Nuevo";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue) // Modo Edición
+        {
+            var compDb = await ComponenteService.ObtenerComponentePorId(Id.Value);
+            if (compDb != null)
+            {
+                componente = compDb;
+                titulo = "Editar";
+            }
+        }
+        else if (IdEquipo.HasValue) // Modo Nuevo
+        {
+            componente = new Componente { id_equipo = IdEquipo.Value };
+        }
+    }
+
+    private async Task Guardar()
+    {
+        await ComponenteService.GuardarComponente(componente);
+        Regresar();
+    }
+
+    private void Cancelar() => Regresar();
+
+    private void Regresar()
+    {
+        // Regresa siempre al detalle del equipo al que pertenece el componente
+        NavigationManager.NavigateTo($"/equipos/detalles/{componente.id_equipo}");
+    }
+}
+
+
+
+@* @page "/componentes/nuevo"
+@page "/componentes/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IComponenteService ComponenteService
+@inject IEquipoService EquipoService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Componente</PageTitle>
+
+<h3>@titulo Componente</h3>
+
+<div class="card p-4 shadow-sm" style="max-width: 800px;">
+    <EditForm Model="componente" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Equipo al que pertenece</label>
+                <InputSelect @bind-Value="componente.id_equipo" class="form-select">
+                    <option value="">-- Seleccione un equipo --</option>
+                    @foreach (var equipo in listaEquipos)
+                    {
+                        <option value="@equipo.id_equipo">@equipo.codigo_inventario - @equipo.marca</option>
+                    }
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Tipo de Componente</label>
+                <InputSelect @bind-Value="componente.tipo_componente" class="form-select">
+                    <option value="">Seleccione...</option>
+                    <option value="Memoria RAM">Memoria RAM</option>
+                    <option value="Disco Duro">Disco Duro</option>
+                    <option value="Procesador">Procesador</option>
+                    <option value="Tarjeta de Video">Tarjeta de Video</option>
+                    <option value="Fuente de Poder">Fuente de Poder</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Marca</label>
+                <InputText @bind-Value="componente.marca" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Modelo</label>
+                <InputText @bind-Value="componente.modelo" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Capacidad / Especificación</label>
+                <InputText @bind-Value="componente.capacidad" class="form-control" placeholder="Ej: 16GB, 1TB, 3.5GHz" />
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Descripción Detallada</label>
+                <InputTextArea @bind-Value="componente.descripcion" class="form-control" rows="2" />
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Guardar Componente</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private Componente componente = new();
+    private List<Equipo> listaEquipos = new();
+    private string titulo = "Nuevo";
+
+    protected override async Task OnInitializedAsync()
+    {
+        listaEquipos = await EquipoService.ObtenerEquipos();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            var cDb = await ComponenteService.ObtenerComponentePorId(Id.Value);
+            if (cDb != null)
+            {
+                componente = cDb;
+                titulo = "Editar";
+            }
+        }
+    }
+
+    private async Task Guardar()
+    {
+        await ComponenteService.GuardarComponente(componente);
+        NavigationManager.NavigateTo("/componentes");
+    }
+
+    private void Cancelar() => NavigationManager.NavigateTo("/componentes");
+}
+ *@

@@ -1,0 +1,113 @@
+﻿@page "/mantenimientos/nuevo/{IdEquipo:int}"
+@page "/mantenimientos/editar/{Id:int}"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IMantenimientoService MantenimientoService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>@titulo Mantenimiento</PageTitle>
+
+<h3>@titulo de Mantenimiento</h3>
+
+<div class="card p-4 shadow-sm" style="max-width: 800px;">
+    <EditForm Model="mantenimiento" OnValidSubmit="Guardar">
+        <DataAnnotationsValidator />
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Tipo de Mantenimiento</label>
+                <InputSelect @bind-Value="mantenimiento.tipo_mantenimiento" class="form-select">
+                    <option value="">Seleccione...</option>
+                    <option value="Preventivo">Preventivo</option>
+                    <option value="Correctivo">Correctivo</option>
+                    <option value="Mejora/Upgrade">Mejora/Upgrade</option>
+                    <option value="Garantía">Garantía</option>
+                </InputSelect>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Fecha</label>
+                <InputDate @bind-Value="mantenimiento.fecha_mantenimiento" class="form-control" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Técnico Responsable</label>
+                <InputText @bind-Value="mantenimiento.tecnico" class="form-control" placeholder="Nombre del técnico" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Costo ($)</label>
+                <InputNumber @bind-Value="mantenimiento.costo" class="form-control" Step="0.01" />
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Descripción del Problema</label>
+                <InputTextArea @bind-Value="mantenimiento.descripcion_problema" class="form-control" rows="2" />
+            </div>
+
+            <div class="col-md-12">
+                <label class="form-label">Solución Aplicada</label>
+                <InputTextArea @bind-Value="mantenimiento.solucion" class="form-control" rows="2" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Estado del Servicio</label>
+                <InputSelect @bind-Value="mantenimiento.estado" class="form-select">
+                    <option value="En Proceso">En Proceso</option>
+                    <option value="Completado">Completado</option>
+                    <option value="Pendiente de Repuesto">Pendiente de Repuesto</option>
+                </InputSelect>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <button type="submit" class="btn btn-success">Guardar Mantenimiento</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; } // Editar
+    [Parameter] public int? IdEquipo { get; set; } // Nuevo
+
+    private Mantenimiento mantenimiento = new()
+    {
+        fecha_mantenimiento = DateTime.Now,
+        estado = "Completado"
+    };
+    private string titulo = "Nuevo Registro";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id.HasValue)
+        {
+            var mDb = await MantenimientoService.ObtenerMantenimientoPorId(Id.Value);
+            if (mDb != null)
+            {
+                mantenimiento = mDb;
+                titulo = "Editar Registro";
+            }
+        }
+        else if (IdEquipo.HasValue)
+        {
+            mantenimiento = new Mantenimiento
+            {
+                id_equipo = IdEquipo.Value,
+                fecha_mantenimiento = DateTime.Now,
+                estado = "Completado"
+            };
+        }
+    }
+
+    private async Task Guardar()
+    {
+        await MantenimientoService.GuardarMantenimiento(mantenimiento);
+        Regresar();
+    }
+
+    private void Cancelar() => Regresar();
+
+    private void Regresar() => NavigationManager.NavigateTo($"/equipos/detalles/{mantenimiento.id_equipo}");
+}

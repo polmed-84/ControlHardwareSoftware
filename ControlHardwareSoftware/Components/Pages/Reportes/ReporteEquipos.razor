@@ -1,0 +1,79 @@
+﻿@page "/reportes/equipos"
+@inject IJSRuntime JS
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IEquipoService EquipoService
+@inject IUbicacionService UbicacionService
+@rendermode InteractiveServer
+
+<PageTitle>Reporte de Inventario</PageTitle>
+
+
+<div class="d-flex justify-content-between align-items-center mb-4 d-print-none">
+    <h1><i class="bi bi-file-earmark-bar-graph"></i> Reporte de Equipos por Área</h1>
+    @* El botón llama a la función de impresión *@
+    <button class="btn btn-primary" @onclick="Imprimir">
+        <i class="bi bi-printer"></i> Generar PDF / Imprimir
+    </button>
+</div>
+@if (ubicaciones == null)
+{
+    <p>Generando reporte...</p>
+}
+else
+{
+    @foreach (var area in ubicaciones)
+    {
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-header bg-primary text-white d-flex justify-content-between">
+                <h5 class="mb-0">@area.nombre_area</h5>
+                <span>Total Equipos: @area.Equipos.Count</span>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Marca/Modelo</th>
+                            <th>Responsable</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in area.Equipos)
+                        {
+                            <tr>
+                                <td>@e.codigo_inventario</td>
+                                <td>@e.tipo_equipo</td>
+                                <td>@e.marca @e.modelo</td>
+                                <td>@(e.Usuario?.nombre ?? "Sin asignar")</td>
+                                <td><span class="badge @(e.estado == "Activo" ? "bg-success" : "bg-warning text-dark")">@e.estado</span></td>
+                            </tr>
+                        }
+                        @if (!area.Equipos.Any())
+                        {
+                            <tr><td colspan="5" class="text-center text-muted">No hay equipos asignados a esta área.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Ubicacion>? ubicaciones;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // El servicio de ubicación debe incluir .Include(u => u.Equipos).ThenInclude(e => e.Usuario)
+        ubicaciones = await UbicacionService.ObtenerUbicacionesEquipos();
+    }
+
+    private async Task Imprimir()
+    {
+        // Llamamos a la función de JS que dispara el cuadro de impresión del sistema
+        await JS.InvokeVoidAsync("imprimirReporte");
+    }
+}

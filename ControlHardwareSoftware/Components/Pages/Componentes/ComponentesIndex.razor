@@ -1,0 +1,72 @@
+﻿@page "/componentes"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject IComponenteService ComponenteService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Inventario de Componentes</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Componentes de Hardware</h1>
+    <button class="btn btn-primary" @onclick="CrearNuevo">
+        <i class="bi bi-cpu"></i> Nuevo Componente
+    </button>
+</div>
+
+@if (componentes == null)
+{
+    <p><em>Cargando componentes...</em></p>
+}
+else
+{
+    <table class="table table-striped table-hover shadow-sm">
+        <thead class="table-dark">
+            <tr>
+                <th>Tipo</th>
+                <th>Marca/Modelo</th>
+                <th>Capacidad</th>
+                <th>Equipo Asignado</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var c in componentes)
+            {
+                <tr>
+                    <td>@c.tipo_componente</td>
+                    <td>@c.marca @c.modelo</td>
+                    <td>@c.capacidad</td>
+                    <td>@(c.Equipo?.codigo_inventario ?? "Sin Asignar")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-warning" @onclick="() => Editar(c.id_componente)">
+                            Editar
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(c.id_componente)">
+                            Eliminar
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Componente>? componentes;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Nota: Asegúrate de que el servicio incluya el equipo en la consulta
+        componentes = await ComponenteService.ObtenerTodos(); // 0 o null para traer todos según tu lógica de servicio
+    }
+
+    private void CrearNuevo() => NavigationManager.NavigateTo("/componentes/nuevo");
+    private void Editar(int id) => NavigationManager.NavigateTo($"/componentes/editar/{id}");
+
+    private async Task Eliminar(int id)
+    {
+        await ComponenteService.EliminarComponente(id);
+        componentes = await ComponenteService.ObtenerTodos();
+    }
+}

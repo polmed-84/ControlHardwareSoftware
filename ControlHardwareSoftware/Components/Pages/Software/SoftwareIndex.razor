@@ -1,0 +1,163 @@
+﻿@page "/softwares"
+@using ControlHardwareSoftware.Components.Models
+@using ControlHardwareSoftware.Components.Services
+@inject ISoftwareService SoftwareService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>Catálogo de Software</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Software Registrado</h1>
+    <button class="btn btn-primary" @onclick="CrearNuevo">
+        <i class="bi bi-box-seam"></i> Nuevo Software
+    </button>
+</div>
+
+@* Barra de búsqueda *@
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="input-group shadow-sm">
+            <span class="input-group-text bg-white">Buscar</span>
+            <input type="text" class="form-control" placeholder="Buscar por nombre, tipo o fabricante..."
+                   @bind="textoBusqueda" @bind:event="oninput" />
+        </div>
+    </div>
+</div>
+
+@if (listaSoftware == null)
+{
+    <p><em>Cargando catálogo...</em></p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover shadow-sm align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Versión</th>
+                    <th>Tipo</th>
+                    <th>Fabricante</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var s in SoftwaresPaginados)
+                {
+                    <tr>
+                        <td><strong>@s.nombre</strong></td>
+                        <td>@s.version_actual</td>
+                        <td>@s.tipo_software</td>
+                        <td>@s.fabricante</td>
+                        <td class="text-center">
+                            <button class="btn btn-sm btn-outline-warning me-1" @onclick="() => Editar(s.id_software)" title="Editar">
+                                Editar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => Eliminar(s.id_software)" title="Eliminar">
+                                Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @* Controles de Paginación *@
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <span class="text-muted">Página @paginaActual de @totalPaginas (@softwaresFiltrados.Count programas)</span>
+        <nav>
+            <ul class="pagination mb-0">
+                <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => CambiarPagina(paginaActual - 1)">Anterior</button>
+                </li>
+                @for (int i = 1; i <= totalPaginas; i++)
+                {
+                    int j = i;
+                    <li class="page-item @(paginaActual == j ? "active" : "")">
+                        <button class="page-link" @onclick="() => CambiarPagina(j)">@j</button>
+                    </li>
+                }
+                <li class="page-item @(paginaActual == totalPaginas ? "disabled" : "")">
+                    <button class="page-link" @onclick="() => CambiarPagina(paginaActual + 1)">Siguiente</button>
+                </li>
+            </ul>
+        </nav>
+    </div>
+}
+
+@code {
+    private List<Software>? listaSoftware;
+    private List<Software> softwaresFiltrados = new();
+    private string _textoBusqueda = "";
+
+    private string textoBusqueda
+    {
+        get => _textoBusqueda;
+        set
+        {
+            if (_textoBusqueda != value)
+            {
+                _textoBusqueda = value;
+                paginaActual = 1;
+                FiltrarSoftwares();
+            }
+        }
+    }
+
+    private int paginaActual = 1;
+    private int elementosPorPagina = 8;
+
+    protected override async Task OnInitializedAsync()
+    {
+        listaSoftware = await SoftwareService.ObtenerSoftwares();
+        softwaresFiltrados = listaSoftware ?? new();
+    }
+
+    private void FiltrarSoftwares()
+    {
+        if (listaSoftware == null) return;
+
+        if (string.IsNullOrWhiteSpace(_textoBusqueda))
+        {
+            softwaresFiltrados = listaSoftware;
+        }
+        else
+        {
+            softwaresFiltrados = listaSoftware.Where(s =>
+                (s.nombre?.Contains(_textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (s.tipo_software?.Contains(_textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (s.fabricante?.Contains(_textoBusqueda, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+        }
+    }
+
+    private IEnumerable<Software> SoftwaresPaginados =>
+        softwaresFiltrados
+            .Skip((paginaActual - 1) * elementosPorPagina)
+            .Take(elementosPorPagina);
+
+    private int totalPaginas => Math.Max(1, (int)Math.Ceiling((double)softwaresFiltrados.Count / elementosPorPagina));
+
+    private void CambiarPagina(int nuevaPagina)
+    {
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas)
+        {
+            paginaActual = nuevaPagina;
+        }
+    }
+
+    private void CrearNuevo() => NavigationManager.NavigateTo("/softwares/nuevo");
+    private void Editar(int id) => NavigationManager.NavigateTo($"/softwares/editar/{id}");
+
+    private async Task Eliminar(int id)
+    {
+        // En tu servicio SoftwareService.cs, asegúrate de tener un método EliminarSoftware
+        if (await SoftwareService.EliminarSoftware(id))
+        {
+            listaSoftware = await SoftwareService.ObtenerSoftwares();
+            FiltrarSoftwares();
+        }
+    }
+}
